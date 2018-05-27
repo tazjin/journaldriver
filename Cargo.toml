@@ -1,0 +1,11 @@
+[package]
+name = "journaldriver"
+version = "0.1.0"
+authors = ["Vincent Ambo <mail@tazj.in>"]
+
+[dependencies]
+libc = "0.2"
+failure = "0.1"
+
+[build-dependencies]
+pkg-config = "0.3"
