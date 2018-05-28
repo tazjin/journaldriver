@@ -1,8 +1,16 @@
-// #[macro_use] extern crate failure;
+#[macro_use] extern crate failure;
+#[macro_use] extern crate hyper;
 #[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
 
+extern crate chrono;
 extern crate env_logger;
 extern crate systemd;
+extern crate serde;
+extern crate serde_json;
+extern crate reqwest;
+
+mod stackdriver;
 
 use systemd::journal::*;
 use std::process;
