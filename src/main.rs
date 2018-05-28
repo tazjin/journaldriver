@@ -6,8 +6,6 @@ extern crate systemd;
 
 use systemd::journal::*;
 use std::process;
-use std::thread;
-use std::sync::mpsc::{channel, Receiver};
 use std::time::{Duration, Instant};
 use std::collections::vec_deque::{VecDeque, Drain};
 
@@ -43,10 +41,11 @@ impl From<JournalRecord> for Record {
     }
 }
 
-/// This function spawns a double-looped, blocking receiver. It will
-/// buffer messages for a second before flushing them to Stackdriver.
-fn receiver_loop(rx: Receiver<Record>) {
-    let mut buf = VecDeque::new();
+/// This function starts a double-looped, blocking receiver. It will
+/// buffer messages for half a second before flushing them to
+/// Stackdriver.
+fn receiver_loop(mut journal: Journal) {
+    let mut buf: VecDeque<Record> = VecDeque::new();
     let iteration = Duration::from_millis(500);
 
     loop {
@@ -58,8 +57,8 @@ fn receiver_loop(rx: Receiver<Record>) {
                 break;
             }
 
-            if let Ok(record) = rx.recv_timeout(iteration) {
-                buf.push_back(record);
+            if let Ok(Some(record)) = journal.await_next_record(Some(iteration)) {
+                buf.push_back(record.into());
             }
         }
 
@@ -91,17 +90,5 @@ fn main () {
         }
     }
 
-    let (tx, rx) = channel();
-
-    let _receiver = thread::spawn(move || receiver_loop(rx));
-
-    journal.watch_all_elements(move |record| {
-        let record: Record = record.into();
-
-        if record.message.is_some() {
-            tx.send(record).ok();
-        }
-
-        Ok(())
-    }).expect("Failed to read new entries from journal");
+    receiver_loop(journal)
 }
