@@ -14,9 +14,16 @@ mod stackdriver;
 
 use std::env;
 use std::mem;
+use std::ops::Add;
 use std::process;
 use std::time::{Duration, Instant};
 use systemd::journal::*;
+
+const METADATA_TOKEN_URL: &str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
+
+header! { (MetadataFlavor, "Metadata-Flavor") => [String] }
+
+type Result<T> = std::result::Result<T, failure::Error>;
 
 #[derive(Debug)]
 struct Record {
@@ -88,6 +95,38 @@ fn flush(records: Vec<Record>) {
     for chunk in records.chunks(1000) {
         debug!("Flushed {} records", chunk.len())
     }
+}
+
+/// Retrieves an access token from the GCP metadata service.
+#[derive(Deserialize)]
+struct TokenResponse {
+    #[serde(rename = "type")]
+    expires_in: u64,
+    access_token: String,
+}
+
+/// Struct used to store a token together with a sensible
+/// representation of when it expires.
+struct Token {
+    token: String,
+    renew_at: Instant,
+}
+
+fn get_metadata_token(client: &reqwest::Client) -> Result<Token> {
+    let now = Instant::now();
+
+    let token: TokenResponse  = client.get(METADATA_TOKEN_URL)
+        .header(MetadataFlavor("Google".into()))
+        .send()?.json()?;
+
+    debug!("Fetched new token from metadata service");
+
+    let renew_at = now.add(Duration::from_secs(token.expires_in / 2));
+
+    Ok(Token {
+        renew_at,
+        token: token.access_token,
+    })
 }
 
 fn main () {
