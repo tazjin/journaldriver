@@ -220,6 +220,18 @@ impl From<JournalRecord> for LogEntry {
     }
 }
 
+/// Attempt to read from the journal. If no new entry is present,
+/// await the next one up to the specified timeout.
+fn receive_next_record(timeout: Duration, journal: &mut Journal)
+                       -> Result<Option<JournalRecord>> {
+    let next_record = journal.next_record()?;
+    if next_record.is_some() {
+        return Ok(next_record);
+    }
+
+    Ok(journal.await_next_record(Some(timeout))?)
+}
+
 /// This function starts a double-looped, blocking receiver. It will
 /// buffer messages for half a second before flushing them to
 /// Stackdriver.
@@ -239,7 +251,7 @@ fn receiver_loop(mut journal: Journal) -> Result<()> {
                 break;
             }
 
-            if let Ok(Some(entry)) = journal.await_next_record(Some(iteration)) {
+            if let Ok(Some(entry)) = receive_next_record(iteration, &mut journal) {
                 trace!("Received a new entry");
                 buf.push(entry.into());
             }
