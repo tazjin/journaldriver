@@ -276,6 +276,9 @@ fn persist_cursor(cursor: String) -> Result<()> {
 /// message can at most contain 1000 log entries which means they are
 /// chunked up here.
 ///
+/// In some cases large payloads seem to cause errors in Stackdriver -
+/// the chunks are therefore made smaller here.
+///
 /// If flushing is successful the last cursor position will be
 /// persisted to disk.
 fn flush(client: &Client,
@@ -288,7 +291,7 @@ fn flush(client: &Client,
         mem::replace(token, new_token);
     }
 
-    for chunk in entries.chunks(1000) {
+    for chunk in entries.chunks(250) {
         let request = prepare_request(chunk);
         if let Err(write_error) = write_entries(client, token, request) {
             error!("Failed to write {} entries: {}", chunk.len(), write_error)
