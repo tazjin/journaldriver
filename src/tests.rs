@@ -22,15 +22,17 @@ fn test_json_entry_serialization() {
     let entry = LogEntry {
         labels: Value::Null,
         timestamp: None,
-        payload: Payload::TextPayload {
-            text_payload: "test entry".into(),
+        payload: Payload::JsonPayload {
+            json_payload: json!({
+                "message": "JSON test"
+            })
         }
     };
 
-    let expected = "{\"labels\":null,\"textPayload\":\"test entry\"}";
+    let expected = "{\"labels\":null,\"jsonPayload\":{\"message\":\"JSON test\"}}";
     let result = to_string(&entry).expect("serialization failed");
 
-    assert_eq!(expected, result, "Plain text payload should serialize correctly")
+    assert_eq!(expected, result, "JSOn payload should serialize correctly")
 }
 
 #[test]

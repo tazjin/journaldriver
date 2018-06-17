@@ -148,7 +148,7 @@ enum Payload {
         text_payload: String,
     },
     JsonPayload {
-        #[serde(rename = "jsonPaylaod")]
+        #[serde(rename = "jsonPayload")]
         json_payload: Value,
     },
 }
