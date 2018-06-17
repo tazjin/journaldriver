@@ -41,7 +41,6 @@ instances.
 
 3. Start `journaldriver`, for example via `systemd`.
 
-
 ## Usage outside of Google Cloud Platform
 
 When running outside of GCP, the following extra steps need to be
@@ -56,8 +55,11 @@ performed:
      should be written.
    * `GOOGLE_APPLICATION_CREDENTIALS`: Filesystem path to the
      JSON-file containing the service account's private key.
-   * `LOG_NAME`: Name of the target log stream in Stackdriver Logging.
+   * `LOG_STREAM`: Name of the target log stream in Stackdriver Logging.
      This will be automatically created if it does not yet exist.
+   * `LOG_NAME`: Name of the target log to write to. This defaults to
+     `journaldriver` if unset, but it is recommended to - for
+     example - set it to the machine hostname.
 
 ## Upcoming features:
 

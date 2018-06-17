@@ -153,7 +153,7 @@ fn get_project_id() -> String {
 /// On non-GCP machines the value is determined by using the
 /// `GOOGLE_CLOUD_PROJECT` and `LOG_NAME` environment variables.
 fn determine_monitored_resource() -> Value {
-    if let Ok(log) = env::var("LOG_NAME") {
+    if let Ok(log) = env::var("LOG_STREAM") {
         json!({
             "type": "logging_log",
             "labels": {
