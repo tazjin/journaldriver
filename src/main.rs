@@ -34,6 +34,7 @@
 //! * TODO 2018-06-15: Extract timestamps from journald instead of
 //!   relying on ingestion timestamps.
 
+#[macro_use] extern crate failure;
 #[macro_use] extern crate hyper;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
@@ -42,7 +43,6 @@
 
 extern crate chrono;
 extern crate env_logger;
-extern crate failure;
 extern crate reqwest;
 extern crate serde;
 extern crate systemd;
@@ -386,13 +386,17 @@ fn prepare_request(entries: &[LogEntry]) -> Value {
 
 /// Perform the log entry insertion in Stackdriver Logging.
 fn write_entries(client: &Client, token: &Token, request: Value) -> Result<()> {
-    client.post(ENTRIES_WRITE_URL)
+    let mut response = client.post(ENTRIES_WRITE_URL)
         .header(header::Authorization(format!("Bearer {}", token.token)))
         .json(&request)
-        .send()?
-        .error_for_status()?;
+        .send()?;
 
-    Ok(())
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let body = response.text().unwrap_or_else(|_| "no response body".into());
+        bail!("{} ({})", body, response.status())
+    }
 }
 
 /// Attempt to read the initial cursor position from the configured
