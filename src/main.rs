@@ -322,7 +322,7 @@ fn flush(client: &Client,
         mem::replace(token, new_token);
     }
 
-    for chunk in entries.chunks(250) {
+    for chunk in entries.chunks(750) {
         let request = prepare_request(chunk);
         if let Err(write_error) = write_entries(client, token, request) {
             error!("Failed to write {} entries: {}", chunk.len(), write_error)
