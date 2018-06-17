@@ -21,16 +21,15 @@
 //! to Stackdriver in batches.
 //!
 //! Stackdriver Logging has a concept of monitored resources. In the
-//! simplest (and currently only supported) case this monitored
-//! resource will be the GCE instance on which journaldriver is
-//! running.
+//! simplest case this monitored resource will be the GCE instance on
+//! which journaldriver is running.
 //!
 //! Information about the instance, the project and required security
 //! credentials are retrieved from Google's metadata instance on GCP.
 //!
-//! Things left to do:
-//! * TODO 2018-06-15: Support non-GCP instances (see comment on
-//!   monitored resource descriptor)
+//! To run journaldriver on non-GCP machines, users must specify the
+//! `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT` and
+//! `LOG_NAME` environment variables.
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate hyper;
@@ -103,17 +102,13 @@ lazy_static! {
             .build().expect("Could not create metadata client")
     };
 
-    /// ID of the GCP project in which this instance is running.
-    static ref PROJECT_ID: String = get_metadata(METADATA_PROJECT_URL)
-        .expect("Could not determine project ID");
+    /// ID of the GCP project to which to send logs.
+    static ref PROJECT_ID: String = get_project_id();
 
-    /// ID of the current GCP instance.
-    static ref INSTANCE_ID: String = get_metadata(METADATA_ID_URL)
-        .expect("Could not determine instance ID");
-
-    /// GCP zone in which this instance is running.
-    static ref ZONE: String = get_metadata(METADATA_ZONE_URL)
-        .expect("Could not determine instance zone");
+    /// Name of the log to write to (this should only be manually
+    /// configured if not running on GCP):
+    static ref LOG_NAME: String = env::var("LOG_NAME")
+        .unwrap_or("journaldriver".into());
 
     /// Service account credentials (if configured)
     static ref SERVICE_ACCOUNT_CREDENTIALS: Option<Credentials> =
@@ -121,20 +116,10 @@ lazy_static! {
         .and_then(|path| File::open(path).ok())
         .and_then(|file| serde_json::from_reader(file).ok());
 
-    /// Descriptor of the currently monitored instance.
-    ///
-    /// For GCE instances, this will be the GCE instance ID. For
-    /// non-GCE machines a sensible solution may be using the machine
-    /// hostname as a Cloud Logging log name, but this is not yet
-    /// implemented.
-    static ref MONITORED_RESOURCE: Value = json!({
-        "type": "gce_instance",
-        "labels": {
-            "project_id": PROJECT_ID.as_str(),
-            "instance_id": INSTANCE_ID.as_str(),
-            "zone": ZONE.as_str(),
-        }
-    });
+    /// Descriptor of the currently monitored instance. Refer to the
+    /// documentation of `determine_monitored_resource` for more
+    /// information.
+    static ref MONITORED_RESOURCE: Value = determine_monitored_resource();
 
     /// Path to the file in which journaldriver should persist its
     /// cursor state.
@@ -151,6 +136,47 @@ fn get_metadata(url: &str) -> Result<String> {
         .read_to_string(&mut output)?;
 
     Ok(output.trim().into())
+}
+
+/// Convenience helper for determining the project ID.
+fn get_project_id() -> String {
+    env::var("GOOGLE_CLOUD_PROJECT")
+        .map_err(Into::into)
+        .or_else(|_: failure::Error| get_metadata(METADATA_PROJECT_URL))
+        .expect("Could not determine project ID")
+}
+
+/// Determines the monitored resource descriptor used in Stackdriver
+/// logs. On GCP this will be set to the instance ID as returned by
+/// the metadata server.
+///
+/// On non-GCP machines the value is determined by using the
+/// `GOOGLE_CLOUD_PROJECT` and `LOG_NAME` environment variables.
+fn determine_monitored_resource() -> Value {
+    if let Ok(log) = env::var("LOG_NAME") {
+        json!({
+            "type": "logging_log",
+            "labels": {
+                "project_id": PROJECT_ID.as_str(),
+                "name": log,
+            }
+        })
+    } else {
+        let instance_id = get_metadata(METADATA_ID_URL)
+            .expect("Could not determine instance ID");
+
+        let zone = get_metadata(METADATA_ZONE_URL)
+            .expect("Could not determine instance zone");
+
+        json!({
+            "type": "gce_instance",
+            "labels": {
+                "project_id": PROJECT_ID.as_str(),
+                "instance_id": instance_id,
+                "zone": zone,
+            }
+        })
+    }
 }
 
 /// Represents the response returned by the metadata server's token
@@ -456,7 +482,7 @@ fn flush(client: &Client,
 /// https://cloud.google.com/logging/docs/reference/v2/rest/v2/entries/write
 fn prepare_request(entries: &[LogEntry]) -> Value {
     json!({
-        "logName": format!("projects/{}/logs/journaldriver", PROJECT_ID.as_str()),
+        "logName": format!("projects/{}/logs/{}", PROJECT_ID.as_str(), LOG_NAME.as_str()),
         "resource": &*MONITORED_RESOURCE,
         "entries": entries,
         "partialSuccess": true
