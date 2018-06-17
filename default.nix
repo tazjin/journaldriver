@@ -11,7 +11,7 @@ with pkgs; rustPlatform.buildRustPackage {
 
   name        = "journaldriver";
   version     = "0.1.0";
-  cargoSha256 = "0pf9dmras8lrqpz9ymax14a77g9w7w1x9bxz5mm159fzkhb4wz6d";
+  cargoSha256 = "04llhriwsrjqnkbjgd22nhci6zmhadclnd8r2bw5092gwdamf49k";
 
   src = ./.;
 
