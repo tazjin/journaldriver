@@ -5,6 +5,7 @@ use serde_json::to_string;
 fn test_text_entry_serialization() {
     let entry = LogEntry {
         labels: Value::Null,
+        timestamp: None,
         payload: Payload::TextPayload {
             text_payload: "test entry".into(),
         }
@@ -20,6 +21,7 @@ fn test_text_entry_serialization() {
 fn test_json_entry_serialization() {
     let entry = LogEntry {
         labels: Value::Null,
+        timestamp: None,
         payload: Payload::TextPayload {
             text_payload: "test entry".into(),
         }
@@ -77,4 +79,13 @@ fn test_json_no_object() {
     };
 
     assert_eq!(expected, payload, "Non-object JSON payload should be plain text");
+}
+
+#[test]
+fn test_parse_microseconds() {
+    let input: String = "1529175149291187".into();
+    let expected: DateTime<Utc> = "2018-06-16T18:52:29.291187Z"
+        .to_string().parse().unwrap();
+
+    assert_eq!(Some(expected), parse_microseconds(input));
 }
