@@ -124,7 +124,7 @@ lazy_static! {
     /// Path to the file in which journaldriver should persist its
     /// cursor state.
     static ref POSITION_FILE: PathBuf = env::var("CURSOR_POSITION_FILE")
-        .unwrap_or("/var/journaldriver/cursor.pos".into())
+        .unwrap_or("/var/lib/journaldriver/cursor.pos".into())
         .into();
 }
 
