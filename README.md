@@ -9,10 +9,9 @@ languages with error-prone "cover every use-case" configuration. This
 tool aims to fit a specific use-case very well, instead of covering
 every possible logging setup.
 
-In the initial version `journaldriver` will only work if deployed
-directly to a Google Compute Engine instance and will use the
-[metadata server][] to figure out credentials and instance
-identification.
+`journaldriver` can be run on GCP-instances with no additional
+configuration as authentication tokens are retrieved from the
+[metadata server][].
 
 ## Features
 
@@ -61,6 +60,33 @@ performed:
      `journaldriver` if unset, but it is recommended to - for
      example - set it to the machine hostname.
 
+## NixOS module
+
+At Aprila we deploy all of our software using [NixOS][], including
+`journaldriver`. The NixOS package repository [contains a module][]
+for setting up `journaldriver`.
+
+On a GCP instance the only required option is this:
+
+```nix
+services.journaldriver.enable = true;
+```
+
+When running outside of GCP, the configuration looks as follows:
+
+```nix
+services.journaldriver = {
+  enable                 = true;
+  logStream              = "prod-environment";
+  logName                = "hostname";
+  googleCloudProject     = "gcp-project-name";
+  applicationCredentials = keyFile;
+};
+```
+
+**Note**: The `journaldriver`-module is not yet included in a stable
+release of NixOS, but it is available on the `unstable`-channel.
+
 ## Upcoming features:
 
 * `journaldriver` will be added to [nixpkgs][] with a complementary
@@ -69,5 +95,5 @@ performed:
 [Stackdriver Logging]: https://cloud.google.com/logging/
 [metadata server]: https://cloud.google.com/compute/docs/storing-retrieving-metadata
 [Google's documentation]: https://cloud.google.com/logging/docs/access-control
-[nixpkgs]: https://github.com/NixOS/nixpkgs/
 [NixOS]: https://nixos.org/
+[contains a module]: https://github.com/NixOS/nixpkgs/pull/42134
