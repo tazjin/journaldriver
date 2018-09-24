@@ -22,6 +22,8 @@ configuration as authentication tokens are retrieved from the
   in Stackdriver
 * `journaldriver` can be used outside of GCP by configuring static
   credentials
+* `journaldriver` will recognise journald's log priority levels and
+  convert them into equivalent Stackdriver log severity levels
 
 ## Usage on Google Cloud Platform
 
@@ -60,6 +62,24 @@ performed:
      `journaldriver` if unset, but it is recommended to - for
      example - set it to the machine hostname.
 
+## Log levels / severities / priorities
+
+`journaldriver` recognises [journald's priorities][] and converts them
+into [equivalent severities][] in Stackdriver. Both sets of values
+correspond to standard `syslog` priorities.
+
+The easiest way to emit log messages with priorites from an
+application is to use [priority prefixes][], which are compatible with
+structured log messages.
+
+For example, to emit a simple warning message (structured and
+unstructured):
+
+```
+$ echo '<4>{"fnord":true, "msg":"structured log (warning)"}' | systemd-cat
+$ echo '<4>unstructured log (warning)' | systemd-cat
+```
+
 ## NixOS module
 
 At Aprila we deploy all of our software using [NixOS][], including
@@ -87,13 +107,11 @@ services.journaldriver = {
 **Note**: The `journaldriver`-module is not yet included in a stable
 release of NixOS, but it is available on the `unstable`-channel.
 
-## Upcoming features:
-
-* `journaldriver` will be added to [nixpkgs][] with a complementary
-  [NixOS][] module for easy configuration.
-
 [Stackdriver Logging]: https://cloud.google.com/logging/
 [metadata server]: https://cloud.google.com/compute/docs/storing-retrieving-metadata
 [Google's documentation]: https://cloud.google.com/logging/docs/access-control
 [NixOS]: https://nixos.org/
 [contains a module]: https://github.com/NixOS/nixpkgs/pull/42134
+[journald's priorities]: http://0pointer.de/public/systemd-man/sd-daemon.html
+[equivalent severities]: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#logseverity
+[priority prefixes]: http://0pointer.de/public/systemd-man/sd-daemon.html
