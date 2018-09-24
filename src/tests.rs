@@ -8,7 +8,8 @@ fn test_text_entry_serialization() {
         timestamp: None,
         payload: Payload::TextPayload {
             text_payload: "test entry".into(),
-        }
+        },
+        severity: None,
     };
 
     let expected = "{\"labels\":null,\"textPayload\":\"test entry\"}";
@@ -26,7 +27,8 @@ fn test_json_entry_serialization() {
             json_payload: json!({
                 "message": "JSON test"
             })
-        }
+        },
+        severity: None,
     };
 
     let expected = "{\"labels\":null,\"jsonPayload\":{\"message\":\"JSON test\"}}";

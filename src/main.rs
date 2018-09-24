@@ -339,6 +339,27 @@ fn parse_microseconds(input: String) -> Option<DateTime<Utc>> {
     }
 }
 
+/// Converts a journald log message priority (using levels 0/emerg through
+/// 7/debug, see "man journalctl" and "man systemd.journal-fields") to a
+/// Stackdriver-compatible severity number (see
+/// https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogSeverity).
+/// Conveniently, the names are the same. Inconveniently, the numbers are not.
+///
+/// Any unknown values are returned as an empty option.
+fn priority_to_severity(priority: String) -> Option<u32> {
+    match priority.as_ref() {
+        "0" => Some(800), // emerg
+        "1" => Some(700), // alert
+        "2" => Some(600), // crit
+        "3" => Some(500), // err
+        "4" => Some(400), // warning
+        "5" => Some(300), // notice
+        "6" => Some(200), // info
+        "7" => Some(100), // debug
+        _ => None,
+    }
+}
+
 /// This structure represents a log entry in the format expected by
 /// the Stackdriver API.
 #[derive(Debug, Serialize)]
@@ -351,6 +372,10 @@ struct LogEntry {
 
     #[serde(flatten)]
     payload: Payload,
+
+    // https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogSeverity
+    #[serde(skip_serializing_if = "Option::is_none")]
+    severity: Option<u32>,
 }
 
 impl From<JournalRecord> for LogEntry {
@@ -382,6 +407,13 @@ impl From<JournalRecord> for LogEntry {
             .remove("_SOURCE_REALTIME_TIMESTAMP")
             .and_then(parse_microseconds);
 
+        // Journald uses syslogd's concept of priority. No idea if this is
+        // always present, but it's optional in the Stackdriver API, so we just
+        // omit it if we can't find or parse it.
+        let severity = record
+            .remove("PRIORITY")
+            .and_then(priority_to_severity);
+
         LogEntry {
             payload,
             timestamp,
@@ -389,6 +421,7 @@ impl From<JournalRecord> for LogEntry {
                 "host": hostname,
                 "unit": unit.unwrap_or_else(|| "syslog".into()),
             }),
+            severity,
         }
     }
 }
