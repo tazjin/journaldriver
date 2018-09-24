@@ -339,13 +339,30 @@ fn parse_microseconds(input: String) -> Option<DateTime<Utc>> {
     }
 }
 
-/// Converts a journald log message priority (using levels 0/emerg through
-/// 7/debug, see "man journalctl" and "man systemd.journal-fields") to a
-/// Stackdriver-compatible severity number (see
-/// https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogSeverity).
-/// Conveniently, the names are the same. Inconveniently, the numbers are not.
+/// Converts a journald log message priority to a
+/// Stackdriver-compatible severity number.
 ///
-/// Any unknown values are returned as an empty option.
+/// Both Stackdriver and journald specify equivalent
+/// severities/priorities. Conveniently, the names are the same.
+/// Inconveniently, the numbers are not.
+///
+/// For more information on the journald priorities, consult these
+/// man-pages:
+///
+/// * systemd.journal-fields(7) (section 'PRIORITY')
+/// * sd-daemon(3)
+/// * systemd.exec(5) (section 'SyslogLevelPrefix')
+///
+/// Note that priorities can be logged by applications via the prefix
+/// concept described in these man pages, without interfering with
+/// structured JSON-payloads.
+///
+/// For more information on the Stackdriver severity levels, please
+/// consult Google's documentation:
+///
+/// https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogSeverity
+///
+/// Any unknown priority values result in no severity being set.
 fn priority_to_severity(priority: String) -> Option<u32> {
     match priority.as_ref() {
         "0" => Some(800), // emerg
