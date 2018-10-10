@@ -117,8 +117,8 @@ services.journaldriver = {
 };
 ```
 
-**Note**: The `journaldriver`-module is not yet included in a stable
-release of NixOS, but it is available on the `unstable`-channel.
+**Note**: The `journaldriver`-module is included in stable releases of
+NixOS since NixOS 18.09.
 
 # Stackdriver Error Reporting
 
